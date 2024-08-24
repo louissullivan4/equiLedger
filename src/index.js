@@ -1,10 +1,13 @@
 const express = require('express');
 const userRoutes = require('./routes/userRoutes');
+const expenseRoutes = require('./routes/expenseRoutes');
 const { Pool } = require('pg');
+const path = require('path');
 const app = express();
 const port = 3000;
 
 app.use(express.json());
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 require('dotenv').config();
 
@@ -26,6 +29,7 @@ app.get('/', (req, res) => {
   });
 
 app.use('/users', userRoutes);
+app.use('/expenses', expenseRoutes);
 
 // Start server
 app.listen(port, () => {

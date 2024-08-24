@@ -23,14 +23,7 @@ const authoriseRole = (roles) => {
     };
 };
 
-const authorisePassword = (password, password_hash) => {
-    return () => {
-        bcrypt.compare(password, password_hash);
-    };
-};
-
 module.exports = {
     authenticateToken,
-    authoriseRole,
-    authorisePassword
+    authoriseRole
 };
