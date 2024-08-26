@@ -2,3 +2,7 @@ node_modules/
 package-lock.json
 .env
 README.md
+src/uploads/
+send.sh
+ls.jpeg
+README.md

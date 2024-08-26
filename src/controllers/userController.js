@@ -3,7 +3,8 @@ const userModel = require('../models/userModel');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 
-const jwtSecret = process.env.JWT_SECRET || 'your-secret-key';
+require('dotenv').config();
+const jwtSecret = process.env.JWT_SECRET;
 
 const createUser = async (req, res) => {
     const { name, email, password, role } = req.body;
@@ -203,7 +204,7 @@ const login = async (req, res) => {
         }
 
         // Generate a JWT token
-        const token = jwt.sign({ userId: user.id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '168h' });
+        const token = jwt.sign({ userId: user.id, role: user.role }, jwtSecret, { expiresIn: '168h' });
 
         res.status(200).json({
             id: user.id,
