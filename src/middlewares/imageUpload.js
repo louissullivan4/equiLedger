@@ -11,22 +11,10 @@ const storage = multer.diskStorage({
     }
 });
 
-// Initialize upload variable with multer settings
-const upload = multer({
-    storage: storage,
-    limits: { fileSize: 10 * 1024 * 1024 }, // Max file size: 10MB
-    fileFilter: function (req, file, cb) {
-        checkFileType(file, cb);
-    }
-}).single('receipt_image'); // Expecting a single file upload with the key 'receipt_image'
-
-// Check file type
+// Check file type function
 function checkFileType(file, cb) {
-    // Allowed file extensions
     const filetypes = /jpeg|jpg|png|gif/;
-    // Check the file extension
     const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-    // Check the mime type
     const mimetype = filetypes.test(file.mimetype);
 
     if (mimetype && extname) {
@@ -35,5 +23,14 @@ function checkFileType(file, cb) {
         cb('Error: Images Only!'); // Reject files that are not images
     }
 }
+
+// Initialize multer with storage and file filter settings
+const upload = multer({
+    storage: storage,
+    limits: { fileSize: 10 * 1024 * 1024 }, // Max file size: 10MB
+    fileFilter: function (req, file, cb) {
+        checkFileType(file, cb);
+    }
+}).single('receipt_image'); // Expecting a single file upload with the key 'receipt_image'
 
 module.exports = upload;

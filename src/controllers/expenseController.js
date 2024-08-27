@@ -7,17 +7,15 @@ const createExpense = async (req, res) => {
             return res.status(400).json({ error: err });
         } else {
             try {
-                const pool = req.pool; // Get the pool from the request
-                const user_id = req.user.userId; // User ID from JWT
+                const pool = req.pool; // Assuming you have a pool in your request
+                const user_id = req.user.userId;
                 const { title, description, category, amount, currency } = req.body;
                 let receipt_image_url = null;
 
-                // Check if an image file was uploaded and handle the URL
                 if (req.file) {
                     receipt_image_url = `/uploads/${req.file.filename}`;
                 }
 
-                // Make sure all required fields are present
                 if (!title || !category || !amount || !currency) {
                     return res.status(400).json({ error: 'Title, category, amount, and currency are required.' });
                 }
