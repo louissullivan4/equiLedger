@@ -1,17 +1,18 @@
+require('dotenv').config();
+
 const multer = require('multer');
+const cloudinary = require('cloudinary').v2;
+const streamifier = require('streamifier');
 const path = require('path');
 
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, path.join(__dirname, 'uploads'));
-    },
-    filename: function (req, file, cb) {
-        const fileName = `${file.fieldname}-${Date.now()}${path.extname(file.originalname)}`;
-        cb(null, fileName);
-    }
+cloudinary.config({ 
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME, 
+    api_key: process.env.CLOUDINARY_API_KEY, 
+    api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-// Init
+const storage = multer.memoryStorage();
+
 const upload = multer({
     storage: storage,
     limits: { fileSize: 10 * 1024 * 1024 }, // Max file size: 10MB
@@ -28,4 +29,21 @@ const upload = multer({
     }
 }).single('receipt_image');
 
-module.exports = upload;
+const uploadToCloudinary = (req, res, next) => {
+    if (!req.file) return next();
+
+    const uploadStream = cloudinary.uploader.upload_stream({ folder: 'uploads' }, (error, result) => {
+        if (error) {
+            return res.status(500).json({ error: 'Failed to upload image to Cloudinary.' });
+        }
+        req.file.path = result.secure_url;
+        next();
+    });
+
+    streamifier.createReadStream(req.file.buffer).pipe(uploadStream);
+};
+
+module.exports = {
+    upload,
+    uploadToCloudinary
+};

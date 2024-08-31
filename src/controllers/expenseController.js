@@ -1,43 +1,58 @@
 const expenseModel = require('../models/expenseModel');
-const upload = require('../middlewares/imageUpload');
 const logger = require('../utils/logger');
+const { upload, uploadToCloudinary } = require('../middlewares/imageUpload');
 
 const createExpense = async (req, res) => {
     const pool = req.pool;
+
     upload(req, res, async (err) => {
         if (err) {
             logger.error('Image upload error: %s', err.message);
             return res.status(400).json({ error: err.message });
         }
-        const user_id = (req.user ? req.user.userId : '').toString();
-        const { title, description, category, amount, currency } = req.body;
-        const receipt_image_url = req.file ? `/uploads/${req.file.filename}` : null;
 
-        if (!user_id || !title || !category || !amount || !currency) {
-            logger.warn('Invalid input data for creating expense: %o', req.body);
-            return res.status(400).json({ error: 'User ID, Title, category, amount, and currency are required.' });
-        }
-
-        const newExpense = {
-            user_id,
-            title,
-            description,
-            category,
-            amount,
-            currency,
-            receipt_image_url,
-        };
-
-        try {
-            const newExpenseAdded = await expenseModel.createExpense(pool, newExpense);
-            logger.info('Expense created successfully: %o', newExpenseAdded);
-            res.status(201).json(newExpenseAdded);
-        } catch (dbErr) {
-            logger.error('Database error while creating expense: %s', dbErr.message);
-            res.status(500).json({ error: 'Failed to save expense to database.' });
+        if (req.file) {
+            uploadToCloudinary(req, res, async (cloudinaryErr) => {
+                if (cloudinaryErr) {
+                    return res.status(500).json({ error: cloudinaryErr.message });
+                }
+                await proceedWithExpenseCreation(req, res);
+            });
+        } else {
+            await proceedWithExpenseCreation(req, res);
         }
     });
 };
+
+async function proceedWithExpenseCreation(req, res) {
+    const user_id = (req.user ? req.user.userId : '').toString();
+    const { title, description, category, amount, currency } = req.body;
+    const receipt_image_url = req.file ? req.file.path : null;
+
+    if (!user_id || !title || !category || !amount || !currency) {
+        logger.warn('Invalid input data for creating expense: %o', req.body);
+        return res.status(400).json({ error: 'User ID, Title, category, amount, and currency are required.' });
+    }
+
+    const newExpense = {
+        user_id,
+        title,
+        description,
+        category,
+        amount,
+        currency,
+        receipt_image_url,
+    };
+
+    try {
+        const newExpenseAdded = await expenseModel.createExpense(req.pool, newExpense);
+        logger.info('Expense created successfully: %o', newExpenseAdded);
+        res.status(201).json(newExpenseAdded);
+    } catch (dbErr) {
+        logger.error('Database error while creating expense: %s', dbErr.message);
+        res.status(500).json({ error: 'Failed to save expense to database.' });
+    }
+}
 
 const getExpenses = async (req, res) => {
     try {
