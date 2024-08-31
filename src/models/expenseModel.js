@@ -10,7 +10,7 @@ const createExpense = async (pool, expense) => {
 
 // Function to get all expenses for a specific user
 const getExpensesByUserId = async (pool, user_id) => {
-    const result = await pool.query('SELECT * FROM expenses WHERE user_id = $1', [user_id]);
+    const result = await pool.query("SELECT * FROM expenses WHERE user_id = $1 AND category != 'income'", [user_id]);
     return result.rows;
 };
 
@@ -18,6 +18,12 @@ const getExpensesByUserId = async (pool, user_id) => {
 const getExpenseById = async (pool, id) => {
     const result = await pool.query('SELECT * FROM expenses WHERE id = $1', [id]);
     return result.rows[0];
+};
+
+const getExpenseByCategory = async (pool, id, category) => {
+    const result = await pool.query('SELECT * FROM expenses WHERE user_id = $1 AND category = $2', [id, category]);
+    console.log(result.rows)
+    return result.rows;
 };
 
 // Function to update an existing expense
@@ -38,6 +44,7 @@ const deleteExpense = async (pool, id) => {
 module.exports = {
     createExpense,
     getExpensesByUserId,
+    getExpenseByCategory,
     getExpenseById,
     updateExpense,
     deleteExpense,

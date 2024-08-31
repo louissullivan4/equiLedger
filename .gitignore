@@ -3,6 +3,7 @@ package-lock.json
 .env
 README.md
 src/uploads/
+src/middlewares/uploads
 send.sh
 ls.jpeg
 README.md

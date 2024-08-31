@@ -2,39 +2,40 @@ const expenseModel = require('../models/expenseModel');
 const upload = require('../middlewares/imageUpload');
 
 const createExpense = async (req, res) => {
+    const pool = req.pool;
     upload(req, res, async (err) => {
         if (err) {
-            return res.status(400).json({ error: err });
-        } else {
-            try {
-                const pool = req.pool; // Assuming you have a pool in your request
-                const user_id = req.user.userId;
-                const { title, description, category, amount, currency } = req.body;
-                let receipt_image_url = null;
+            return res.status(400).json({ error: err.message });
+        }
+        const user_id = (req.user ? req.user.userId : '').toString()
+        const { title, description, category, amount, currency } = req.body;
+        const receipt_image_url = req.file ? `/uploads/${req.file.filename}` : null;
 
-                if (req.file) {
-                    receipt_image_url = `/uploads/${req.file.filename}`;
-                }
+        if (!user_id || !title || !category || !amount || !currency) {
+            return res.status(400).json({ error: 'User ID, Title, category, amount, and currency are required.' });
+        }
 
-                if (!title || !category || !amount || !currency) {
-                    return res.status(400).json({ error: 'Title, category, amount, and currency are required.' });
-                }
+        const newExpense = {
+            user_id,
+            title,
+            description,
+            category,
+            amount,
+            currency,
+            receipt_image_url,
+        };
 
-                const newExpense = await expenseModel.createExpense(pool, {
-                    user_id,
-                    title,
-                    description,
-                    category,
-                    amount,
-                    currency,
-                    receipt_image_url
-                });
+        if (!newExpense) {
+            return res.status(500).json({ error: 'Failed to create expense. Invalid expense data.' });
+        }
 
-                res.status(201).json(newExpense);
-            } catch (error) {
-                console.error('Error creating expense:', error);
-                res.status(500).json({ error: 'Internal server error.' });
-            }
+        try {
+            const newExpenseAdded = await expenseModel.createExpense(pool, newExpense);
+            console.log('Expense added:', newExpenseAdded);
+            res.status(201).json(newExpenseAdded);
+        } catch (dbErr) {
+            console.error('Database error:', dbErr);
+            res.status(500).json({ error: 'Failed to save expense to database.' });
         }
     });
 };
@@ -45,7 +46,13 @@ const getExpenses = async (req, res) => {
     try {
         const pool = req.pool; // Get the pool from the request
         const user_id = req.user.userId; // User ID from JWT
-        const expenses = await expenseModel.getExpensesByUserId(pool, user_id);
+        const category = req.query?.category;
+        let expenses;
+        if (category){
+            expenses = await expenseModel.getExpenseByCategory(pool, user_id, category);
+        } else {
+            expenses = await expenseModel.getExpensesByUserId(pool, user_id);
+        }
         res.status(200).json(expenses);
     } catch (error) {
         console.error('Error fetching expenses:', error);
