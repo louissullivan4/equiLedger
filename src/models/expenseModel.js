@@ -1,4 +1,4 @@
-// Function to create a new expense
+// expenseModel.js
 const createExpense = async (pool, expense) => {
     const { user_id, title, description, category, amount, currency, receipt_image_url } = expense;
     const result = await pool.query(
@@ -8,13 +8,11 @@ const createExpense = async (pool, expense) => {
     return result.rows[0];
 };
 
-// Function to get all expenses for a specific user
 const getExpensesByUserId = async (pool, user_id) => {
     const result = await pool.query("SELECT * FROM expenses WHERE user_id = $1 AND category != 'income'", [user_id]);
     return result.rows;
 };
 
-// Function to get a specific expense by its ID
 const getExpenseById = async (pool, id) => {
     const result = await pool.query('SELECT * FROM expenses WHERE id = $1', [id]);
     return result.rows[0];
@@ -22,11 +20,9 @@ const getExpenseById = async (pool, id) => {
 
 const getExpenseByCategory = async (pool, id, category) => {
     const result = await pool.query('SELECT * FROM expenses WHERE user_id = $1 AND category = $2', [id, category]);
-    console.log(result.rows)
     return result.rows;
 };
 
-// Function to update an existing expense
 const updateExpense = async (pool, id, expense) => {
     const { title, description, category, amount, currency, receipt_image_url } = expense;
     const result = await pool.query(
@@ -36,7 +32,6 @@ const updateExpense = async (pool, id, expense) => {
     return result.rows[0];
 };
 
-// Function to delete an expense by its ID
 const deleteExpense = async (pool, id) => {
     await pool.query('DELETE FROM expenses WHERE id = $1', [id]);
 };

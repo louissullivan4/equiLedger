@@ -1,28 +1,28 @@
 const { createLogger, format, transports } = require('winston');
+const path = require('path');
+
+const logDirectory = path.join(__dirname, '..', 'logs');
 
 const logger = createLogger({
-    level: 'info',
+    level: 'silly',
     format: format.combine(
+        format.colorize(),
         format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-        format.errors({ stack: true }),
-        format.splat(),
-        format.json()
+        format.printf(({ timestamp, level, message, ...meta }) => {
+            let log = `[${timestamp}] [${level}]: ${message}`;
+            if (Object.keys(meta).length) {
+                log += ` ${JSON.stringify(meta)}`;
+            }
+            return log;
+        })
     ),
-    defaultMeta: { service: 'expense-service' },
+    defaultMeta: { service: 'equiledger-service' },
     transports: [
-        new transports.File({ filename: 'error.log', level: 'error' }),
-        new transports.File({ filename: 'combined.log' }),
+        new transports.Console(),
+        new transports.File({ filename: path.join(logDirectory, 'error.log'), level: 'error' }),
+        new transports.File({ filename: path.join(logDirectory, 'combined.log') }),
     ],
 });
 
-// If we're not in production then log to the `console` as well
-if (process.env.NODE_ENV !== 'production') {
-    logger.add(new transports.Console({
-        format: format.combine(
-            format.colorize(),
-            format.simple()
-        )
-    }));
-}
 
 module.exports = logger;

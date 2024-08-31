@@ -5,10 +5,8 @@ const injectPool = require('../middlewares/poolMiddleware');
 
 const router = express.Router();
 
-// Apply the pool middleware to all routes
 router.use(injectPool);
 
-// Routes for managing expenses
 router.get('/', authenticateToken, expenseController.getExpenses);
 router.get('/:id', authenticateToken, expenseController.getExpenseById);
 router.post('/', authenticateToken, expenseController.createExpense);

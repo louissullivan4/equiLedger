@@ -40,8 +40,8 @@ const updateUserByEmail = async (pool, currentEmail, updateFields) => {
         valueIndex++;
     }
 
-    values.push(currentEmail); // Add currentEmail as the last parameter
-
+    values.push(currentEmail);
+    
     const query = `UPDATE users SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE email = $${valueIndex} RETURNING *`;
     const result = await pool.query(query, values);
     return result.rows[0];
