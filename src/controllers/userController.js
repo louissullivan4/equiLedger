@@ -1,27 +1,30 @@
-const { authorisePassword } = require('../middlewares/authMiddleware');
 const userModel = require('../models/userModel');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
-
+const logger = require('../utils/logger');
 require('dotenv').config();
+
 const jwtSecret = process.env.JWT_SECRET;
 
 const createUser = async (req, res) => {
     const { name, email, password, role } = req.body;
 
     if (!name || !email || !password) {
+        logger.warn('Missing required fields for creating user: %o', req.body);
         return res.status(400).json({ error: 'Name, email, and password are required.' });
     }
 
     try {
         const existingUser = await userModel.getUserByEmail(req.pool, email);
         if (existingUser) {
+            logger.warn('Attempt to create a user with an existing email: %s', email);
             return res.status(400).json({ error: 'User with this email already exists.' });
         }
 
         const newUser = await userModel.createUser(req.pool, name, email, password, role);
         const token = jwt.sign({ userId: newUser.id, role: newUser.role }, jwtSecret, { expiresIn: '168h' });
 
+        logger.info('User created successfully: %s', email);
         res.status(201).json({
             id: newUser.id,
             name: newUser.name,
@@ -31,23 +34,21 @@ const createUser = async (req, res) => {
             token,
         });
     } catch (error) {
-        console.error('Error creating user:', error);
+        logger.error('Error creating user: %s', error.message);
         res.status(500).json({ error: 'Internal server error.' });
     }
 };
 
 const getAllUsers = async (req, res) => {
     try {
-        const allUsers = {
-            'all_users' : await userModel.getAllUsers(req.pool)
-        }
+        const allUsers = { 'all_users': await userModel.getAllUsers(req.pool) };
+        logger.info('Fetched all users.');
         res.status(200).json(allUsers);
     } catch (error) {
-        console.error('Error fetching users:', error);
+        logger.error('Error fetching users: %s', error.message);
         res.status(500).json({ error: 'Internal server error.' });
     }
 };
-
 
 const getUser = async (req, res) => {
     const { id } = req.params;
@@ -55,8 +56,10 @@ const getUser = async (req, res) => {
     try {
         const user = await userModel.getUserById(req.pool, id);
         if (!user) {
+            logger.warn('User not found with ID: %s', id);
             return res.status(404).json({ error: 'User not found.' });
         }
+        logger.info('Fetched user with ID: %s', id);
         res.status(200).json({
             id: user.id,
             name: user.name,
@@ -64,7 +67,7 @@ const getUser = async (req, res) => {
             role: user.role,
         });
     } catch (error) {
-        console.error('Error retrieving user:', error);
+        logger.error('Error retrieving user: %s', error.message);
         res.status(500).json({ error: 'Internal server error.' });
     }
 };
@@ -75,8 +78,10 @@ const getUserByEmail = async (req, res) => {
     try {
         const user = await userModel.getUserByEmail(req.pool, email);
         if (!user) {
+            logger.warn('User not found with email: %s', email);
             return res.status(404).json({ error: 'User not found.' });
         }
+        logger.info('Fetched user with email: %s', email);
         res.status(200).json({
             id: user.id,
             name: user.name,
@@ -84,57 +89,54 @@ const getUserByEmail = async (req, res) => {
             role: user.role,
         });
     } catch (error) {
-        console.error('Error retrieving user by email:', error);
+        logger.error('Error retrieving user by email: %s', error.message);
         res.status(500).json({ error: 'Internal server error.' });
     }
 };
 
 const updateUser = async (req, res) => {
-    const { email } = req.params; // current email
-    const { name, role, new_email } = req.body; // new_email is the new email address if user wants to change it
-    const currentUserId= req.user.userId;
-    console.log(req.body)
+    const { email } = req.params;
+    const { name, role, new_email } = req.body;
+    const currentUserId = req.user.userId;
+
     if (!email) {
+        logger.warn('Missing current email for updating user.');
         return res.status(400).json({ error: 'Current email is required.' });
     }
 
     try {
-        // Find the user by current email
         const userToUpdate = await userModel.getUserByEmail(req.pool, email);
-
         if (!userToUpdate) {
+            logger.warn('User not found for update with email: %s', email);
             return res.status(404).json({ error: 'User not found.' });
         }
 
         const currentUser = await userModel.getUserById(req.pool, currentUserId);
 
-        // Check if the current user is the owner or has an admin/accountant role
-        if (currentUser.email !== email && !['admin', 'accountant'].includes(currentUserRole)) {
+        if (currentUser.email !== email && !['admin', 'accountant'].includes(currentUser.role)) {
+            logger.warn('Unauthorized update attempt by user: %s for user email: %s', currentUser.email, email);
             return res.status(403).json({ error: 'Access denied. You do not have the required permissions.' });
         }
-        // Prepare the fields to be updated
+
         const updateFields = {};
         if (name) updateFields.name = name;
 
-        // Handle email update
-        if (new_email) {
-            if (new_email !== email) {
-                const isUnique = await userModel.isEmailUnique(req.pool, new_email);
-                if (!isUnique) {
-                    return res.status(400).json({ error: 'The new email address is already in use.' });
-                }
-                updateFields.email = new_email; // Set the new email for update
+        if (new_email && new_email !== email) {
+            const isUnique = await userModel.isEmailUnique(req.pool, new_email);
+            if (!isUnique) {
+                logger.warn('New email already in use: %s', new_email);
+                return res.status(400).json({ error: 'The new email address is already in use.' });
             }
+            updateFields.email = new_email;
         }
 
-        // Handle role update, only admin can do this
         if (role && currentUser.role === 'admin') {
             updateFields.role = role;
         }
 
-        // Update the user in the database
         const updatedUser = await userModel.updateUserByEmail(req.pool, email, updateFields);
 
+        logger.info('User updated successfully: %s', email);
         res.status(200).json({
             id: updatedUser.id,
             name: updatedUser.name,
@@ -143,7 +145,7 @@ const updateUser = async (req, res) => {
             updated_at: updatedUser.updated_at,
         });
     } catch (error) {
-        console.error('Error updating user:', error);
+        logger.error('Error updating user: %s', error.message);
         res.status(500).json({ error: 'Internal server error.' });
     }
 };
@@ -153,30 +155,30 @@ const deleteUser = async (req, res) => {
     const currentUserId = req.user.userId;
 
     if (!email) {
+        logger.warn('Missing email for deleting user.');
         return res.status(400).json({ error: 'Email is required.' });
     }
 
     try {
-        // Find the user by email
         const userToDelete = await userModel.getUserByEmail(req.pool, email);
-
         if (!userToDelete) {
+            logger.warn('User not found for deletion with email: %s', email);
             return res.status(404).json({ error: 'User not found.' });
         }
 
         const currentUser = await userModel.getUserById(req.pool, currentUserId);
 
-        // Check if the current user is the owner or has an admin/accountant role
-        if (currentUser.email !== email && !['admin', 'accountant'].includes(currentUserRole)) {
+        if (currentUser.email !== email && !['admin', 'accountant'].includes(currentUser.role)) {
+            logger.warn('Unauthorized delete attempt by user: %s for user email: %s', currentUser.email, email);
             return res.status(403).json({ error: 'Access denied. You do not have the required permissions.' });
         }
 
-        // Delete the user from the database
         await userModel.deleteUserByEmail(req.pool, email);
 
+        logger.info('User deleted successfully: %s', email);
         res.status(200).json({ message: 'User deleted successfully.' });
     } catch (error) {
-        console.error('Error deleting user:', error);
+        logger.error('Error deleting user: %s', error.message);
         res.status(500).json({ error: 'Internal server error.' });
     }
 };
@@ -185,27 +187,26 @@ const login = async (req, res) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
+        logger.warn('Missing email or password for login attempt.');
         return res.status(400).json({ error: 'Email and password are required.' });
     }
 
     try {
-        // Find the user by email
         const user = await userModel.getUserByEmail(req.pool, email);
-
         if (!user) {
+            logger.warn('Invalid login attempt for email: %s', email);
             return res.status(401).json({ error: 'Invalid email or password.' });
         }
 
-        // Compare the password with the stored hash
         const validPassword = await bcrypt.compare(password, user.password_hash);
-        // const validPassword = await authorisePassword(password, user.password_hash);
         if (!validPassword) {
+            logger.warn('Invalid password for email: %s', email);
             return res.status(401).json({ error: 'Invalid email or password.' });
         }
 
-        // Generate a JWT token
         const token = jwt.sign({ userId: user.id, role: user.role }, jwtSecret, { expiresIn: '168h' });
 
+        logger.info('User logged in successfully: %s', email);
         res.status(200).json({
             id: user.id,
             name: user.name,
@@ -214,7 +215,7 @@ const login = async (req, res) => {
             token,
         });
     } catch (error) {
-        console.error('Error during login:', error);
+        logger.error('Error during login: %s', error.message);
         res.status(500).json({ error: 'Internal server error.' });
     }
 };
@@ -228,4 +229,3 @@ module.exports = {
     deleteUser,
     login
 };
-
