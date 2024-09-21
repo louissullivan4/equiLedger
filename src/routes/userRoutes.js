@@ -17,4 +17,11 @@ router.delete('/email/:email', authenticateToken, userController.deleteUser);
 
 router.post('/login', userController.login);
 
+router.post('/dashboard-login', userController.dashboardLogin);
+
+router.post('/invite', authenticateToken, authoriseRole(['admin', 'accountant']), userController.inviteUser);
+
+router.post('/request-password-reset', userController.requestPasswordReset);
+router.post('/reset-password', userController.resetPassword);
+
 module.exports = router;
