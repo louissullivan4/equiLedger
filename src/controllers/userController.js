@@ -39,19 +39,6 @@ const createUser = async (req, res) => {
         renewal_date
     } = req.body;
 
-    if (token) {
-        try {
-            const decoded = jwt.verify(token, jwtSecret);
-
-            if (decoded.email !== email) {
-                return res.status(400).json({ error: 'Invalid invite token.' });
-            }
-        } catch (error) {
-            logger.warn('Invalid invite token: %s', error.message);
-            return res.status(400).json({ error: 'Invalid or expired invite token.' });
-        }
-    }
-
     if (!fname || !sname || !email || !password || !date_of_birth) {
         logger.warn('Missing required fields for creating user: %o', req.body);
         return res.status(400).json({ error: 'First name, surname, email, password, and date of birth are required.' });
@@ -318,6 +305,49 @@ const login = async (req, res) => {
     }
 };
 
+const signup = async (req, res) => {
+    const {
+        email,
+        password,
+        token
+    } = req.body;
+
+    if (token) {
+        try {
+            const decoded = jwt.verify(token, jwtSecret);
+
+            if (decoded.email !== email) {
+                return res.status(400).json({ error: 'Invalid invite token.' });
+            }
+        } catch (error) {
+            logger.warn('Invalid invite token: %s', error.message);
+            return res.status(400).json({ error: 'Invalid or expired invite token.' });
+        }
+    }
+
+    if (!email || !password) {
+        logger.warn('Missing required fields for signing up a user: %o', req.body);
+        return res.status(400).json({ error: 'Email and password are required.' });
+    }
+
+    try {
+        const existingUser = await userModel.getUserByEmail(req.pool, email);
+        if (existingUser) {
+            logger.warn('Attempt to create a user with an existing email: %s', email);
+            return res.status(400).json({ error: 'User with this email already exists.' });
+        }
+        res.status(201).json({
+            email: email,
+            password: password,
+            token: token,
+        });
+    } catch (error) {
+        logger.error('Error creating user: %s', error.message);
+        res.status(500).json({ error: 'Internal server error.' });
+    }
+    
+};
+
 const dashboardLogin = async (req, res) => {
     const { email, password } = req.body;
 
@@ -437,7 +467,7 @@ const inviteUser = async (req, res) => {
 
         const inviteToken = jwt.sign({ email }, jwtSecret, { expiresIn: '48h' });
 
-        const inviteLink = `${frontendURL}/create-user?token=${inviteToken}`;
+        const inviteLink = `${frontendURL}/signup?token=${inviteToken}`;
 
         const transporter = nodemailer.createTransport({
             service: 'gmail',
@@ -472,6 +502,7 @@ module.exports = {
     updateUser,
     deleteUser,
     login,
+    signup,
     resetPassword,
     requestPasswordReset,
     inviteUser,

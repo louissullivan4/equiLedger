@@ -11,6 +11,7 @@ const createUser = async (pool, user) => {
         date_of_birth,
         ppsno,
         id_image_url,
+        currency,
         address_line1,
         address_line2,
         city,

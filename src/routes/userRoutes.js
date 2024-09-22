@@ -17,6 +17,8 @@ router.delete('/email/:email', authenticateToken, userController.deleteUser);
 
 router.post('/login', userController.login);
 
+router.post('/signup', userController.signup);
+
 router.post('/dashboard-login', userController.dashboardLogin);
 
 router.post('/invite', authenticateToken, authoriseRole(['admin', 'accountant']), userController.inviteUser);

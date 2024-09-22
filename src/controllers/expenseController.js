@@ -3,8 +3,6 @@ const logger = require('../utils/logger');
 const { upload, uploadToCloudinary } = require('../middlewares/imageUpload');
 
 const createExpense = async (req, res) => {
-    const pool = req.pool;
-
     upload(req, res, async (err) => {
         if (err) {
             logger.error('Image upload error: %s', err.message);
