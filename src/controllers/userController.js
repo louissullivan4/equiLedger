@@ -306,16 +306,11 @@ const login = async (req, res) => {
 };
 
 const signup = async (req, res) => {
-    const {
-        email,
-        password,
-        token
-    } = req.body;
+    const { email, password, token } = req.body;
 
     if (token) {
         try {
             const decoded = jwt.verify(token, jwtSecret);
-
             if (decoded.email !== email) {
                 return res.status(400).json({ error: 'Invalid invite token.' });
             }
@@ -345,7 +340,6 @@ const signup = async (req, res) => {
         logger.error('Error creating user: %s', error.message);
         res.status(500).json({ error: 'Internal server error.' });
     }
-    
 };
 
 const dashboardLogin = async (req, res) => {
