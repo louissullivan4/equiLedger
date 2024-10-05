@@ -4,9 +4,16 @@ const expenseRoutes = require('./routes/expenseRoutes');
 const path = require('path');
 const logger = require('./utils/logger');
 const pool = require('./utils/db');
+const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
+
+app.use(cors({
+    origin: 'http://localhost:3001',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+}));
 
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));

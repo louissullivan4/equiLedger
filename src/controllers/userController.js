@@ -318,6 +318,9 @@ const signup = async (req, res) => {
             logger.warn('Invalid invite token: %s', error.message);
             return res.status(400).json({ error: 'Invalid or expired invite token.' });
         }
+    } else {
+        logger.warn('Missing token for signing up a user: %o', req.body);
+        return res.status(400).json({ error: 'Invalid or expired invite token' });
     }
 
     if (!email || !password) {
@@ -364,7 +367,7 @@ const dashboardLogin = async (req, res) => {
         }
 
         let roles = ['admin', 'accountant']
-        if (!roles.includes(req.user.role)) {
+        if (!roles.includes(user.role)) {
             logger.warn('User %s does not have correct role for dashboard. Please contact an admin.', email);
             return res.status(401).json({ error: 'Authentication requirements not fulfilled.' });
         }
@@ -459,26 +462,35 @@ const inviteUser = async (req, res) => {
             return res.status(400).json({ error: 'User with this email already exists.' });
         }
 
-        const inviteToken = jwt.sign({ email }, jwtSecret, { expiresIn: '48h' });
+        const inviteToken = jwt.sign({ email }, jwtSecret, { expiresIn: '168h' });
 
         const inviteLink = `${frontendURL}/signup?token=${inviteToken}`;
 
         const transporter = nodemailer.createTransport({
-            service: 'gmail',
+            service: "Gmail",
+            host: "smtp.gmail.com",
+            port: 465,
+            secure: true,
             auth: {
-                user: process.env.EMAIL_USERNAME,
-                pass: process.env.EMAIL_PASSWORD,
+              user: process.env.EMAIL_USERNAME,
+              pass: process.env.EMAIL_PASSWORD,
             },
-        });
+          });
 
         const mailOptions = {
             from: process.env.EMAIL_USERNAME,
             to: email,
-            subject: 'You have been invited to create an account',
-            text: `You have been invited to create an account. Click the link to create your account: ${inviteLink}`,
+            subject: 'You have been invited to create an account!',
+            text: `You have been invited to create an account with EquiLedger. Click the link to create your account: ${inviteLink}`,
         };
 
-        await transporter.sendMail(mailOptions);
+        transporter.sendMail(mailOptions, (error, info) => {
+            if (error) {
+                logger.error("Error sending email: ", error);
+            } else {
+                logger.info("Email sent: ", info.response);
+            }
+        });
 
         logger.info('Invitation email sent to: %s', email);
         res.status(200).json({ message: 'Invitation email sent successfully.' });

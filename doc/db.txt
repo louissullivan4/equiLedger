@@ -68,4 +68,12 @@ curl -X POST http://localhost:3000/expenses \
 -F "receipt_image=@ls.jpg"
 
 
-curl -X POST http://localhost:3000/users -H "Content-Type: application/json" -d '{"name": "Louis", "email": "admin", "password": "admin", "role": "admin"}'  
+curl -X POST http://localhost:3000/users -H "Content-Type: application/json" -d '{"fname": "Louis", "sname": "Sullivan", "email": "admin@gmail.com", "password": "admin", "role": "admin", "date_of_birth": "16-05-2001"}'
+
+
+curl -X POST http://localhost:3000/users/login -H "Content-Type: application/json" -d '{"email": "admin@gmail.com", "password": "admin"}'
+
+curl -X POST http://localhost:3000/users/invite \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEsInJvbGUiOiJhZG1pbiIsImlhdCI6MTcyNzAyNjI4OSwiZXhwIjoxNzI3NjMxMDg5fQ.rsvjNHGE9PwEHY1WstiK-mXyzQ7uNsbRnt5JbP9Nvqc" \
+  -H "Content-Type: application/json" \
+  -d '{"email": "sullivanlouis0@gmail.com"}'
